@@ -28,8 +28,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.database.Product
@@ -564,17 +567,41 @@ fun AuthLoginModalDialog(
     onLoginSuccess: (nickname: String, phone: String, loginType: String) -> Unit
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: 快捷一键登录, 1: 手机号验证码
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: 快捷一键登录, 1: 手机号验证码, 2: 账号密码
     var phoneNumber by remember { mutableStateOf("13888889201") }
     var smsCode by remember { mutableStateOf("888888") }
+    var accountName by remember { mutableStateOf("glow_user@skin.com") }
+    var password by remember { mutableStateOf("GlowSkin2026!") }
+    var isPasswordVisible by remember { mutableStateOf(false) }
     var agreementChecked by remember { mutableStateOf(true) }
 
     var isSendingCode by remember { mutableStateOf(false) }
     var countdownSeconds by remember { mutableIntStateOf(60) }
+    
+    // Authentication Loading & Prevention of Multiple Submissions State
+    var isAuthenticating by remember { mutableStateOf(false) }
+    var authenticatingMethod by remember { mutableStateOf<String?>(null) }
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    
     val coroutineScope = rememberCoroutineScope()
 
+    if (showForgotPasswordDialog) {
+        ForgotPasswordDialog(
+            initialAccount = accountName,
+            onDismiss = { showForgotPasswordDialog = false },
+            onPasswordResetSuccess = { updatedAccount, updatedPass ->
+                accountName = updatedAccount
+                password = updatedPass
+                isPasswordVisible = true
+                showForgotPasswordDialog = false
+            }
+        )
+    }
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (!isAuthenticating) onDismiss()
+        },
         confirmButton = {},
         dismissButton = {},
         title = {
@@ -606,13 +633,21 @@ fun AuthLoginModalDialog(
                 ) {
                     Tab(
                         selected = selectedTab == 0,
+                        enabled = !isAuthenticating,
                         onClick = { selectedTab = 0 },
-                        text = { Text("一键/社交登录", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                        text = { Text("一键/社交", fontWeight = FontWeight.Bold, fontSize = 11.5.sp) }
                     )
                     Tab(
                         selected = selectedTab == 1,
+                        enabled = !isAuthenticating,
                         onClick = { selectedTab = 1 },
-                        text = { Text("手机验证码", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                        text = { Text("手机验证码", fontWeight = FontWeight.Bold, fontSize = 11.5.sp) }
+                    )
+                    Tab(
+                        selected = selectedTab == 2,
+                        enabled = !isAuthenticating,
+                        onClick = { selectedTab = 2 },
+                        text = { Text("账号密码", fontWeight = FontWeight.Bold, fontSize = 11.5.sp) }
                     )
                 }
 
@@ -622,64 +657,127 @@ fun AuthLoginModalDialog(
                         // WeChat One-Click OAuth
                         Button(
                             onClick = {
+                                if (isAuthenticating) return@Button
                                 if (!agreementChecked) {
                                     Toast.makeText(context, "请先勾选《用户协议》与《隐私政策》", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    onLoginSuccess("微信美肤达人", "138****9201", "微信快捷登录")
+                                    isAuthenticating = true
+                                    authenticatingMethod = "wechat"
+                                    coroutineScope.launch {
+                                        delay(800)
+                                        onLoginSuccess("微信美肤达人", "138****9201", "微信快捷登录")
+                                        isAuthenticating = false
+                                        authenticatingMethod = null
+                                    }
                                 }
                             },
+                            enabled = !isAuthenticating,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(46.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF07C160))
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF07C160),
+                                disabledContainerColor = Color(0xFF07C160).copy(alpha = 0.5f)
+                            )
                         ) {
-                            Icon(Icons.Default.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("微信一键授权登录", fontWeight = FontWeight.Bold, color = Color.White)
+                            if (authenticatingMethod == "wechat") {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("微信授权登录中...", fontWeight = FontWeight.Bold, color = Color.White)
+                            } else {
+                                Icon(Icons.Default.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("微信一键授权登录", fontWeight = FontWeight.Bold, color = Color.White)
+                            }
                         }
 
                         // Alipay One-Click OAuth
                         Button(
                             onClick = {
+                                if (isAuthenticating) return@Button
                                 if (!agreementChecked) {
                                     Toast.makeText(context, "请先勾选《用户协议》与《隐私政策》", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    onLoginSuccess("支付宝美肤通", "159****3820", "支付宝快捷登录")
+                                    isAuthenticating = true
+                                    authenticatingMethod = "alipay"
+                                    coroutineScope.launch {
+                                        delay(800)
+                                        onLoginSuccess("支付宝美肤通", "159****3820", "支付宝快捷登录")
+                                        isAuthenticating = false
+                                        authenticatingMethod = null
+                                    }
                                 }
                             },
+                            enabled = !isAuthenticating,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(46.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1677FF))
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF1677FF),
+                                disabledContainerColor = Color(0xFF1677FF).copy(alpha = 0.5f)
+                            )
                         ) {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("支付宝快捷登录", fontWeight = FontWeight.Bold, color = Color.White)
+                            if (authenticatingMethod == "alipay") {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("支付宝验证登录中...", fontWeight = FontWeight.Bold, color = Color.White)
+                            } else {
+                                Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("支付宝快捷登录", fontWeight = FontWeight.Bold, color = Color.White)
+                            }
                         }
 
                         // Local Phone 1-Click
                         OutlinedButton(
                             onClick = {
+                                if (isAuthenticating) return@OutlinedButton
                                 if (!agreementChecked) {
                                     Toast.makeText(context, "请先勾选《用户协议》与《隐私政策》", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    onLoginSuccess("手机号用户8839", "138****8839", "本机号码一键登录")
+                                    isAuthenticating = true
+                                    authenticatingMethod = "phone_oneclick"
+                                    coroutineScope.launch {
+                                        delay(800)
+                                        onLoginSuccess("手机号用户8839", "138****8839", "本机号码一键登录")
+                                        isAuthenticating = false
+                                        authenticatingMethod = null
+                                    }
                                 }
                             },
+                            enabled = !isAuthenticating,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(46.dp),
                             shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, RosePrimary)
+                            border = BorderStroke(1.dp, if (isAuthenticating) RosePrimary.copy(alpha = 0.4f) else RosePrimary)
                         ) {
-                            Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = RosePrimary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("本机号码一键登录 (138****8839)", fontWeight = FontWeight.Bold, color = RosePrimary)
+                            if (authenticatingMethod == "phone_oneclick") {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = RosePrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("本机号码登录中...", fontWeight = FontWeight.Bold, color = RosePrimary)
+                            } else {
+                                Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = RosePrimary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("本机号码一键登录 (138****8839)", fontWeight = FontWeight.Bold, color = RosePrimary)
+                            }
                         }
                     }
-                } else {
+                } else if (selectedTab == 1) {
                     // SMS Code Login Tab
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(
@@ -688,6 +786,7 @@ fun AuthLoginModalDialog(
                             label = { Text("手机号码") },
                             leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = RosePrimary) },
                             singleLine = true,
+                            enabled = !isAuthenticating,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -703,6 +802,7 @@ fun AuthLoginModalDialog(
                                 label = { Text("短信验证码") },
                                 leadingIcon = { Icon(Icons.Default.Sms, contentDescription = null, tint = RosePrimary) },
                                 singleLine = true,
+                                enabled = !isAuthenticating,
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp)
                             )
@@ -723,7 +823,7 @@ fun AuthLoginModalDialog(
                                         }
                                     }
                                 },
-                                enabled = !isSendingCode,
+                                enabled = !isSendingCode && !isAuthenticating,
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = RosePrimary),
                                 modifier = Modifier.height(54.dp)
@@ -734,21 +834,137 @@ fun AuthLoginModalDialog(
 
                         Button(
                             onClick = {
+                                if (isAuthenticating) return@Button
                                 if (!agreementChecked) {
                                     Toast.makeText(context, "请先勾选《用户协议》与《隐私政策》", Toast.LENGTH_SHORT).show()
                                 } else if (smsCode.isBlank()) {
                                     Toast.makeText(context, "请输入验证码", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    onLoginSuccess("美肤精选官", phoneNumber.take(3) + "****" + phoneNumber.takeLast(4), "手机号验证码登录")
+                                    isAuthenticating = true
+                                    authenticatingMethod = "sms_login"
+                                    coroutineScope.launch {
+                                        delay(800)
+                                        onLoginSuccess("美肤精选官", phoneNumber.take(3) + "****" + phoneNumber.takeLast(4), "手机号验证码登录")
+                                        isAuthenticating = false
+                                        authenticatingMethod = null
+                                    }
                                 }
                             },
+                            enabled = !isAuthenticating,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = RosePrimary)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RosePrimary,
+                                disabledContainerColor = RosePrimary.copy(alpha = 0.5f)
+                            )
                         ) {
-                            Text("确认登录 / 注册", fontWeight = FontWeight.Bold)
+                            if (authenticatingMethod == "sms_login") {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("正在验证登录...", fontWeight = FontWeight.Bold, color = Color.White)
+                            } else {
+                                Text("确认登录 / 注册", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else {
+                    // Password Login / Register Tab
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = accountName,
+                            onValueChange = { accountName = it },
+                            label = { Text("账号 / 邮箱 / 手机号") },
+                            leadingIcon = { Icon(Icons.Default.AccountCircle, contentDescription = null, tint = RosePrimary) },
+                            singleLine = true,
+                            enabled = !isAuthenticating,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            label = { Text("登录密码") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = RosePrimary) },
+                            trailingIcon = {
+                                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = if (isPasswordVisible) "隐藏密码" else "显示密码",
+                                        tint = MutedText
+                                    )
+                                }
+                            },
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            singleLine = true,
+                            enabled = !isAuthenticating,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(
+                                onClick = { showForgotPasswordDialog = true },
+                                enabled = !isAuthenticating,
+                                contentPadding = PaddingValues(0.dp),
+                                modifier = Modifier.height(28.dp)
+                            ) {
+                                Text("忘记密码？", fontSize = 12.sp, color = RosePrimary, fontWeight = FontWeight.Medium)
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                if (isAuthenticating) return@Button
+                                if (!agreementChecked) {
+                                    Toast.makeText(context, "请先勾选《用户协议》与《隐私政策》", Toast.LENGTH_SHORT).show()
+                                } else if (accountName.isBlank()) {
+                                    Toast.makeText(context, "请输入账号", Toast.LENGTH_SHORT).show()
+                                } else if (password.isBlank()) {
+                                    Toast.makeText(context, "请输入密码", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    isAuthenticating = true
+                                    authenticatingMethod = "password_login"
+                                    coroutineScope.launch {
+                                        delay(800)
+                                        val displayName = if (accountName.contains("@")) accountName.substringBefore("@") else "Glow美肤人"
+                                        onLoginSuccess(displayName, accountName, "账号密码登录")
+                                        isAuthenticating = false
+                                        authenticatingMethod = null
+                                    }
+                                }
+                            },
+                            enabled = !isAuthenticating,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RosePrimary,
+                                disabledContainerColor = RosePrimary.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            if (authenticatingMethod == "password_login") {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("密码验证登录中...", fontWeight = FontWeight.Bold, color = Color.White)
+                            } else {
+                                Text("确认登录 / 注册", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -762,7 +978,8 @@ fun AuthLoginModalDialog(
                 ) {
                     Checkbox(
                         checked = agreementChecked,
-                        onCheckedChange = { agreementChecked = it },
+                        onCheckedChange = { if (!isAuthenticating) agreementChecked = it },
+                        enabled = !isAuthenticating,
                         colors = CheckboxDefaults.colors(checkedColor = RosePrimary)
                     )
                     Text(
@@ -774,13 +991,262 @@ fun AuthLoginModalDialog(
                 }
 
                 TextButton(
-                    onClick = onDismiss,
+                    onClick = {
+                        if (!isAuthenticating) onDismiss()
+                    },
+                    enabled = !isAuthenticating,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("暂不登录，先去体验", color = MutedText)
                 }
             }
         }
+    )
+}
+
+@Composable
+fun ForgotPasswordDialog(
+    initialAccount: String,
+    onDismiss: () -> Unit,
+    onPasswordResetSuccess: (newAccount: String, newPass: String) -> Unit
+) {
+    val context = LocalContext.current
+    var resetMethod by remember { mutableIntStateOf(0) } // 0: 手机号重置, 1: 邮箱重置
+    var targetContact by remember {
+        mutableStateOf(if (initialAccount.contains("@")) initialAccount else if (initialAccount.startsWith("1")) initialAccount else "13888889201")
+    }
+    var resetCode by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var isNewPasswordVisible by remember { mutableStateOf(false) }
+    var isConfirmPasswordVisible by remember { mutableStateOf(false) }
+
+    var isSendingCode by remember { mutableStateOf(false) }
+    var countdownSeconds by remember { mutableIntStateOf(60) }
+    var isResetting by remember { mutableStateOf(false) }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = {
+            if (!isResetting) onDismiss()
+        },
+        confirmButton = {},
+        dismissButton = {},
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Surface(
+                    shape = CircleShape,
+                    color = RosePrimary.copy(alpha = 0.12f),
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Key, contentDescription = null, tint = RosePrimary, modifier = Modifier.size(28.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("重置登录密码", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text("验证绑定的手机或邮箱以重设密码", fontSize = 12.sp, color = MutedText)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Tab selector: Phone vs Email
+                TabRow(
+                    selectedTabIndex = resetMethod,
+                    containerColor = Color.Transparent,
+                    contentColor = RosePrimary,
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                ) {
+                    Tab(
+                        selected = resetMethod == 0,
+                        enabled = !isResetting,
+                        onClick = {
+                            resetMethod = 0
+                            if (!targetContact.startsWith("1")) targetContact = "13888889201"
+                        },
+                        text = { Text("手机号验证", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                    )
+                    Tab(
+                        selected = resetMethod == 1,
+                        enabled = !isResetting,
+                        onClick = {
+                            resetMethod = 1
+                            if (!targetContact.contains("@")) targetContact = "glow_user@skin.com"
+                        },
+                        text = { Text("邮箱验证", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                    )
+                }
+
+                // Target contact input
+                OutlinedTextField(
+                    value = targetContact,
+                    onValueChange = { targetContact = it },
+                    label = { Text(if (resetMethod == 0) "绑定手机号" else "绑定邮箱地址") },
+                    leadingIcon = {
+                        Icon(
+                            if (resetMethod == 0) Icons.Default.Phone else Icons.Default.Email,
+                            contentDescription = null,
+                            tint = RosePrimary
+                        )
+                    },
+                    singleLine = true,
+                    enabled = !isResetting,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                // Verification code row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = resetCode,
+                        onValueChange = { resetCode = it },
+                        label = { Text("验证码") },
+                        leadingIcon = { Icon(Icons.Default.Sms, contentDescription = null, tint = RosePrimary) },
+                        singleLine = true,
+                        enabled = !isResetting,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Button(
+                        onClick = {
+                            if (targetContact.isBlank()) {
+                                Toast.makeText(context, if (resetMethod == 0) "请输入手机号" else "请输入邮箱", Toast.LENGTH_SHORT).show()
+                            } else {
+                                isSendingCode = true
+                                countdownSeconds = 60
+                                Toast.makeText(context, "验证码已发送至 ${targetContact}（验证码: 6688）", Toast.LENGTH_LONG).show()
+                                resetCode = "6688"
+                                coroutineScope.launch {
+                                    while (countdownSeconds > 0) {
+                                        delay(1000)
+                                        countdownSeconds--
+                                    }
+                                    isSendingCode = false
+                                }
+                            }
+                        },
+                        enabled = !isSendingCode && !isResetting,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RosePrimary),
+                        modifier = Modifier.height(54.dp)
+                    ) {
+                        Text(if (isSendingCode) "${countdownSeconds}s" else "获取验证码", fontSize = 12.sp)
+                    }
+                }
+
+                // New Password
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("新密码（至少6位）") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = RosePrimary) },
+                    trailingIcon = {
+                        IconButton(onClick = { isNewPasswordVisible = !isNewPasswordVisible }) {
+                            Icon(
+                                imageVector = if (isNewPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (isNewPasswordVisible) "隐藏密码" else "显示密码",
+                                tint = MutedText
+                            )
+                        }
+                    },
+                    visualTransformation = if (isNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    enabled = !isResetting,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                // Confirm Password
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("确认新密码") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = RosePrimary) },
+                    trailingIcon = {
+                        IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
+                            Icon(
+                                imageVector = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (isConfirmPasswordVisible) "隐藏密码" else "显示密码",
+                                tint = MutedText
+                            )
+                        }
+                    },
+                    visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    enabled = !isResetting,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Submit Button
+                Button(
+                    onClick = {
+                        if (isResetting) return@Button
+                        if (targetContact.isBlank()) {
+                            Toast.makeText(context, if (resetMethod == 0) "请输入绑定的手机号" else "请输入绑定的邮箱", Toast.LENGTH_SHORT).show()
+                        } else if (resetCode.isBlank()) {
+                            Toast.makeText(context, "请输入验证码", Toast.LENGTH_SHORT).show()
+                        } else if (newPassword.length < 6) {
+                            Toast.makeText(context, "新密码长度不能少于6位", Toast.LENGTH_SHORT).show()
+                        } else if (newPassword != confirmPassword) {
+                            Toast.makeText(context, "两次输入的密码不一致", Toast.LENGTH_SHORT).show()
+                        } else {
+                            isResetting = true
+                            coroutineScope.launch {
+                                delay(1000)
+                                Toast.makeText(context, "密码重置成功！已更新为新密码", Toast.LENGTH_SHORT).show()
+                                isResetting = false
+                                onPasswordResetSuccess(targetContact, newPassword)
+                            }
+                        }
+                    },
+                    enabled = !isResetting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RosePrimary,
+                        disabledContainerColor = RosePrimary.copy(alpha = 0.5f)
+                    )
+                ) {
+                    if (isResetting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("正在重置密码...", fontWeight = FontWeight.Bold, color = Color.White)
+                    } else {
+                        Text("确认重置密码", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                TextButton(
+                    onClick = { if (!isResetting) onDismiss() },
+                    enabled = !isResetting,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("返回登录", color = MutedText, fontSize = 13.sp)
+                }
+            }
+        },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = Color.White
     )
 }
 

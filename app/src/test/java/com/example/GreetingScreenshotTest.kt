@@ -4,7 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.example.data.remote.AiSkinAnalysisResult
 import com.example.ui.components.SkinAnalysisDataVisualizationCard
-import com.example.ui.theme.AiSkinTheme
+import com.example.ui.theme.GlowSkinTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -38,11 +38,12 @@ class GreetingScreenshotTest {
       recommendedIngredients = listOf("透明质酸", "神经酰胺"),
       avoidedIngredients = listOf("高浓度酒精"),
       morningRoutineSteps = listOf("温和洁面", "保湿水"),
-      eveningRoutineSteps = listOf("卸妆洁面", "修护晚霜")
+      eveningRoutineSteps = listOf("卸妆洁面", "修护晚霜"),
+      dietAndLifestyleTips = listOf("多饮水，少吃高糖食品")
     )
 
     composeTestRule.setContent {
-      AiSkinTheme {
+      GlowSkinTheme {
         SkinAnalysisDataVisualizationCard(result = sampleResult)
       }
     }
