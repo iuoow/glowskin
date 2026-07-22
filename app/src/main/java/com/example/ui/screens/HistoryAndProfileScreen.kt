@@ -181,21 +181,21 @@ fun HistoryAndProfileScreen(
             // Quick Service / Feature Entry Grid
             item {
                 Text(
-                    text = "美肤核心功能与深度扩展",
-                    style = MaterialTheme.typography.titleSmall,
+                    text = "精选美肤服务",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         QuickServiceCard(
-                            title = "Before & After 对比",
-                            subtitle = "多维度肤质对比改善",
+                            title = "Before & After",
+                            subtitle = "肤质多维改善对比",
                             icon = Icons.Default.Compare,
                             badgeText = "NEW",
                             modifier = Modifier.weight(1f),
@@ -203,8 +203,8 @@ fun HistoryAndProfileScreen(
                         )
 
                         QuickServiceCard(
-                            title = "成分库安全匹配",
-                            subtitle = "查护肤成分/避雷",
+                            title = "成分库避雷匹配",
+                            subtitle = "查防敏与安全等级",
                             icon = Icons.Default.Science,
                             badgeText = "工具",
                             modifier = Modifier.weight(1f),
@@ -214,11 +214,11 @@ fun HistoryAndProfileScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         QuickServiceCard(
-                            title = "个性化改善指南",
-                            subtitle = "护肤步骤与护理方案",
+                            title = "个性化护理方案",
+                            subtitle = "日常美肤步骤与技巧",
                             icon = Icons.Default.AutoFixHigh,
                             badgeText = null,
                             modifier = Modifier.weight(1f),
@@ -226,8 +226,8 @@ fun HistoryAndProfileScreen(
                         )
 
                         QuickServiceCard(
-                            title = "护肤推荐 (直购)",
-                            subtitle = "正品供应商数据对接中",
+                            title = "正品护肤推荐",
+                            subtitle = "供应商直购对接中",
                             icon = Icons.Default.ShoppingBag,
                             badgeText = "即将推出",
                             modifier = Modifier.weight(1f),
@@ -237,11 +237,11 @@ fun HistoryAndProfileScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         QuickServiceCard(
                             title = "测肤打卡提醒",
-                            subtitle = if (isDailyReminderEnabled) "已开启每日提醒" else "未开启",
+                            subtitle = if (isDailyReminderEnabled) "20:00 每日提醒" else "提醒未开启",
                             icon = Icons.Default.NotificationsActive,
                             badgeText = null,
                             modifier = Modifier.weight(1f),
@@ -249,8 +249,8 @@ fun HistoryAndProfileScreen(
                         )
 
                         QuickServiceCard(
-                            title = "再去测一次",
-                            subtitle = "相机光效 / 深度问卷",
+                            title = "再次深度测肤",
+                            subtitle = "AI相机 / 问卷诊断",
                             icon = Icons.Default.CameraAlt,
                             badgeText = null,
                             modifier = Modifier.weight(1f),
@@ -425,29 +425,53 @@ fun QuickServiceCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, RoseBorder.copy(alpha = 0.6f))
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, RoseBorder.copy(alpha = 0.8f))
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Surface(
                 shape = CircleShape,
-                color = RosePrimary.copy(alpha = 0.12f),
-                modifier = Modifier.size(36.dp)
+                color = RosePrimary.copy(alpha = 0.14f),
+                modifier = Modifier.size(42.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(imageVector = icon, contentDescription = null, tint = RosePrimary, modifier = Modifier.size(20.dp))
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = RosePrimary,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(text = title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     if (badgeText != null) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
@@ -456,14 +480,20 @@ fun QuickServiceCard(
                             Text(
                                 text = badgeText,
                                 fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.ExtraBold,
                                 color = RosePrimary,
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                             )
                         }
                     }
                 }
-                Text(text = subtitle, style = MaterialTheme.typography.labelSmall, color = MutedText, fontSize = 10.sp)
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MutedText,
+                    fontSize = 10.5.sp,
+                    maxLines = 1
+                )
             }
         }
     }

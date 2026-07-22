@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -916,6 +917,7 @@ fun QuizDetectionContent(
     onSubmitQuiz: () -> Unit
 ) {
     var currentQuestionIndex by remember { mutableIntStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
 
     val questions = listOf(
         QuizQuestionItem(
@@ -1163,10 +1165,20 @@ fun QuizDetectionContent(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 5.dp)
-                                    .clickable { q.updateAnswer(option) },
+                                    .clickable {
+                                        q.updateAnswer(option)
+                                        if (currentQuestionIndex < 5) {
+                                            coroutineScope.launch {
+                                                kotlinx.coroutines.delay(280)
+                                                if (currentQuestionIndex < 5) {
+                                                    currentQuestionIndex++
+                                                }
+                                            }
+                                        }
+                                    },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) RosePrimary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    containerColor = if (isSelected) RosePrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                                 ),
                                 border = BorderStroke(
                                     width = if (isSelected) 2.dp else 1.dp,
@@ -1190,7 +1202,17 @@ fun QuizDetectionContent(
 
                                     RadioButton(
                                         selected = isSelected,
-                                        onClick = { q.updateAnswer(option) },
+                                        onClick = {
+                                            q.updateAnswer(option)
+                                            if (currentQuestionIndex < 5) {
+                                                coroutineScope.launch {
+                                                    kotlinx.coroutines.delay(280)
+                                                    if (currentQuestionIndex < 5) {
+                                                        currentQuestionIndex++
+                                                    }
+                                                }
+                                            }
+                                        },
                                         colors = RadioButtonDefaults.colors(selectedColor = RosePrimary)
                                     )
                                 }
