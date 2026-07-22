@@ -29,11 +29,15 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.database.Product
 import com.example.data.database.SkinScanRecord
 import com.example.ui.theme.*
+import com.example.viewmodel.UserProfile
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,17 +45,24 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryAndProfileScreen(
+    userProfile: UserProfile,
     records: List<SkinScanRecord>,
     favoriteProducts: List<Product>,
     onToggleFavorite: (String, Boolean) -> Unit,
+    onLoginUser: (String, String, String) -> Unit,
+    onLogoutUser: () -> Unit,
+    onUpdateProfile: (String, String) -> Unit,
     onNavigateToProducts: () -> Unit,
     onNavigateToRoutine: () -> Unit,
     onNavigateToDetect: () -> Unit
 ) {
     val context = LocalContext.current
+    var showAuthDialog by remember { mutableStateOf(false) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
     var showCompareDialog by remember { mutableStateOf(false) }
     var showIngredientMatcher by remember { mutableStateOf(false) }
     var showReminderSettings by remember { mutableStateOf(false) }
+
     var isDailyReminderEnabled by remember { mutableStateOf(true) }
     var streakDays by remember { mutableIntStateOf(7) }
     var hasCheckedInToday by remember { mutableStateOf(false) }
@@ -66,6 +77,17 @@ fun HistoryAndProfileScreen(
                         fontWeight = FontWeight.Bold
                     )
                 },
+                actions = {
+                    IconButton(onClick = {
+                        if (userProfile.isLoggedIn) {
+                            showEditProfileDialog = true
+                        } else {
+                            showAuthDialog = true
+                        }
+                    }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = RosePrimary)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -78,7 +100,7 @@ fun HistoryAndProfileScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Profile Card & Streak Banner
+            // Profile Card & Auth State Banner
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -89,51 +111,120 @@ fun HistoryAndProfileScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
+                            // Avatar
                             Surface(
                                 shape = CircleShape,
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.size(56.dp)
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clickable {
+                                        if (!userProfile.isLoggedIn) showAuthDialog = true
+                                        else showEditProfileDialog = true
+                                    }
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        imageVector = Icons.Default.Face,
+                                        imageVector = if (userProfile.isLoggedIn) Icons.Default.Face else Icons.Default.AccountCircle,
                                         contentDescription = "Avatar",
                                         tint = RosePrimary,
-                                        modifier = Modifier.size(36.dp)
+                                        modifier = Modifier.size(40.dp)
                                     )
                                 }
                             }
 
                             Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (userProfile.isLoggedIn) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = userProfile.nickname,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = ChampagneGold.copy(alpha = 0.3f)
+                                        ) {
+                                            Text(
+                                                text = userProfile.vipLevel,
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFFD81B60),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Glow 女性美肤会员",
+                                        text = "${userProfile.loginType} · ${userProfile.phoneOrEmail}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MutedText
+                                    )
+                                    Text(
+                                        text = "美肤目标：${userProfile.skinGoal}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = RosePrimary,
+                                        maxLines = 1
+                                    )
+                                } else {
+                                    Text(
+                                        text = "未登录美肤账号",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = ChampagneGold.copy(alpha = 0.3f)
-                                    ) {
-                                        Text(
-                                            text = "VIP",
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = Color(0xFFD81B60),
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
+                                    Text(
+                                        text = "点击一键登录，多端同步皮肤档案",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MutedText
+                                    )
                                 }
-                                Text(
-                                    text = if (records.isNotEmpty()) "最新肤质：${records.first().skinType} (${records.first().overallScore}分)" else "尚未检测肤质",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MutedText
-                                )
                             }
 
-                            // Daily Check-in Button
+                            // Right Action Button
+                            if (userProfile.isLoggedIn) {
+                                OutlinedButton(
+                                    onClick = { showEditProfileDialog = true },
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, RosePrimary),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp), tint = RosePrimary)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("编辑", style = MaterialTheme.typography.labelSmall, color = RosePrimary, fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                Button(
+                                    onClick = { showAuthDialog = true },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = RosePrimary),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text("快速登录", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = RoseBorder.copy(alpha = 0.4f))
+
+                        // Stats & Check-in Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                ProfileStatItem("检测次数", "${records.size} 次")
+                                ProfileStatItem("打卡天数", "${streakDays} 天")
+                                ProfileStatItem("收藏护肤品", "${favoriteProducts.size} 件")
+                            }
+
                             Button(
                                 onClick = {
                                     if (!hasCheckedInToday) {
@@ -163,22 +254,11 @@ fun HistoryAndProfileScreen(
                                 )
                             }
                         }
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = RoseBorder.copy(alpha = 0.4f))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            ProfileStatItem("检测次数", "${records.size} 次")
-                            ProfileStatItem("连续打卡", "${streakDays} 天")
-                            ProfileStatItem("收藏护肤品", "${favoriteProducts.size} 件")
-                        }
                     }
                 }
             }
 
-            // Quick Service / Feature Entry Grid
+            // Refactored Feature Grid Section ("精选美肤服务")
             item {
                 Text(
                     text = "精选美肤服务",
@@ -295,7 +375,6 @@ fun HistoryAndProfileScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Skin Trend Line Canvas
                             SkinTrendLineCanvas(records)
                         }
                     }
@@ -316,8 +395,9 @@ fun HistoryAndProfileScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, RoseBorder.copy(alpha = 0.5f))
                     ) {
                         Box(
                             modifier = Modifier
@@ -331,14 +411,13 @@ fun HistoryAndProfileScreen(
                 }
             } else {
                 items(records) { record ->
-                    HistoryRecordCard(record)
+                    HistoryRecordCard(record = record)
                 }
             }
 
             // Favorite Products Section
             if (favoriteProducts.isNotEmpty()) {
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "已收藏的护肤品 (${favoriteProducts.size})",
                         style = MaterialTheme.typography.titleSmall,
@@ -348,14 +427,78 @@ fun HistoryAndProfileScreen(
                 }
 
                 items(favoriteProducts) { product ->
-                    ProductItemCard(
-                        product = product,
-                        onToggleFavorite = { onToggleFavorite(product.id, false) },
-                        onClick = { }
-                    )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, RoseBorder.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = product.brand, style = MaterialTheme.typography.labelSmall, color = MutedText)
+                                Text(text = product.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                Text(text = "适配: ${product.suitableSkinTypes.joinToString()}", style = MaterialTheme.typography.labelSmall, color = RosePrimary)
+                            }
+                            IconButton(onClick = { onToggleFavorite(product.id, false) }) {
+                                Icon(Icons.Default.Favorite, contentDescription = "Unfavorite", tint = RosePrimary)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Account Security & Logout Section
+            if (userProfile.isLoggedIn) {
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            onLogoutUser()
+                            Toast.makeText(context, "已安全退出当前账号", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, Color(0xFFD32F2F))
+                    ) {
+                        Icon(Icons.Default.Logout, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("退出登录 / 切换账号", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
+    }
+
+    // Modal Sheet 1: Auth / Login / Register Modal
+    if (showAuthDialog) {
+        AuthLoginModalDialog(
+            onDismiss = { showAuthDialog = false },
+            onLoginSuccess = { nickname, phone, loginType ->
+                onLoginUser(nickname, phone, loginType)
+                showAuthDialog = false
+                Toast.makeText(context, "登录成功！欢迎回来，$nickname ✨", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    // Modal Sheet 2: Edit Profile Modal
+    if (showEditProfileDialog) {
+        EditProfileModalDialog(
+            currentProfile = userProfile,
+            onDismiss = { showEditProfileDialog = false },
+            onSave = { name, goal ->
+                onUpdateProfile(name, goal)
+                showEditProfileDialog = false
+                Toast.makeText(context, "个人资料已更新！", Toast.LENGTH_SHORT).show()
+            }
+        )
     }
 
     // Modal Dialog: Before & After Comparison
@@ -413,6 +556,286 @@ fun HistoryAndProfileScreen(
             }
         )
     }
+}
+
+@Composable
+fun AuthLoginModalDialog(
+    onDismiss: () -> Unit,
+    onLoginSuccess: (nickname: String, phone: String, loginType: String) -> Unit
+) {
+    val context = LocalContext.current
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: 快捷一键登录, 1: 手机号验证码
+    var phoneNumber by remember { mutableStateOf("13888889201") }
+    var smsCode by remember { mutableStateOf("888888") }
+    var agreementChecked by remember { mutableStateOf(true) }
+
+    var isSendingCode by remember { mutableStateOf(false) }
+    var countdownSeconds by remember { mutableIntStateOf(60) }
+    val coroutineScope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        dismissButton = {},
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Surface(
+                    shape = CircleShape,
+                    color = RosePrimary.copy(alpha = 0.12f),
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = RosePrimary, modifier = Modifier.size(28.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Glow 登录 / 快速注册", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text("登录后开启 AI 美肤智能档案与云端同步", style = MaterialTheme.typography.labelSmall, color = MutedText)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Tab Selector
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    contentColor = RosePrimary
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text("一键/社交登录", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text("手机验证码", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                    )
+                }
+
+                if (selectedTab == 0) {
+                    // Social / 1-Click Login Tab
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        // WeChat One-Click OAuth
+                        Button(
+                            onClick = {
+                                if (!agreementChecked) {
+                                    Toast.makeText(context, "请先勾选《用户协议》与《隐私政策》", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    onLoginSuccess("微信美肤达人", "138****9201", "微信快捷登录")
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF07C160))
+                        ) {
+                            Icon(Icons.Default.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("微信一键授权登录", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+
+                        // Alipay One-Click OAuth
+                        Button(
+                            onClick = {
+                                if (!agreementChecked) {
+                                    Toast.makeText(context, "请先勾选《用户协议》与《隐私政策》", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    onLoginSuccess("支付宝美肤通", "159****3820", "支付宝快捷登录")
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1677FF))
+                        ) {
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("支付宝快捷登录", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+
+                        // Local Phone 1-Click
+                        OutlinedButton(
+                            onClick = {
+                                if (!agreementChecked) {
+                                    Toast.makeText(context, "请先勾选《用户协议》与《隐私政策》", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    onLoginSuccess("手机号用户8839", "138****8839", "本机号码一键登录")
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, RosePrimary)
+                        ) {
+                            Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = RosePrimary, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("本机号码一键登录 (138****8839)", fontWeight = FontWeight.Bold, color = RosePrimary)
+                        }
+                    }
+                } else {
+                    // SMS Code Login Tab
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = phoneNumber,
+                            onValueChange = { phoneNumber = it },
+                            label = { Text("手机号码") },
+                            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = RosePrimary) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = smsCode,
+                                onValueChange = { smsCode = it },
+                                label = { Text("短信验证码") },
+                                leadingIcon = { Icon(Icons.Default.Sms, contentDescription = null, tint = RosePrimary) },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            Button(
+                                onClick = {
+                                    if (phoneNumber.length < 11) {
+                                        Toast.makeText(context, "请输入有效的11位手机号", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        isSendingCode = true
+                                        Toast.makeText(context, "验证码已发送至 $phoneNumber，演示验证码：888888", Toast.LENGTH_LONG).show()
+                                        coroutineScope.launch {
+                                            for (i in 60 downTo 1) {
+                                                countdownSeconds = i
+                                                delay(1000)
+                                            }
+                                            isSendingCode = false
+                                        }
+                                    }
+                                },
+                                enabled = !isSendingCode,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = RosePrimary),
+                                modifier = Modifier.height(54.dp)
+                            ) {
+                                Text(if (isSendingCode) "${countdownSeconds}s" else "获取验证码", fontSize = 12.sp)
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                if (!agreementChecked) {
+                                    Toast.makeText(context, "请先勾选《用户协议》与《隐私政策》", Toast.LENGTH_SHORT).show()
+                                } else if (smsCode.isBlank()) {
+                                    Toast.makeText(context, "请输入验证码", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    onLoginSuccess("美肤精选官", phoneNumber.take(3) + "****" + phoneNumber.takeLast(4), "手机号验证码登录")
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = RosePrimary)
+                        ) {
+                            Text("确认登录 / 注册", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = RoseBorder)
+
+                // Privacy Agreement Checkbox
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Checkbox(
+                        checked = agreementChecked,
+                        onCheckedChange = { agreementChecked = it },
+                        colors = CheckboxDefaults.colors(checkedColor = RosePrimary)
+                    )
+                    Text(
+                        text = "我已阅读并同意《用户服务协议》和《隐私政策》",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MutedText,
+                        fontSize = 10.5.sp
+                    )
+                }
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("暂不登录，先去体验", color = MutedText)
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun EditProfileModalDialog(
+    currentProfile: UserProfile,
+    onDismiss: () -> Unit,
+    onSave: (nickname: String, skinGoal: String) -> Unit
+) {
+    var nickname by remember { mutableStateOf(currentProfile.nickname) }
+    var skinGoal by remember { mutableStateOf(currentProfile.skinGoal) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = { onSave(nickname, skinGoal) },
+                colors = ButtonDefaults.buttonColors(containerColor = RosePrimary)
+            ) {
+                Text("保存更新")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        },
+        title = { Text("编辑个人美肤资料", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = nickname,
+                    onValueChange = { nickname = it },
+                    label = { Text("昵称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                OutlinedTextField(
+                    value = skinGoal,
+                    onValueChange = { skinGoal = it },
+                    label = { Text("美肤改善目标") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                Text(
+                    text = "绑定账号：${currentProfile.phoneOrEmail} (${currentProfile.loginType})",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MutedText
+                )
+            }
+        }
+    )
 }
 
 @Composable
@@ -531,7 +954,6 @@ fun BeforeAfterCompareModal(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Record Selectors
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -567,7 +989,6 @@ fun BeforeAfterCompareModal(
 
                     HorizontalDivider(color = RoseBorder)
 
-                    // Metrics Comparison Table
                     val scoreDiff = after.overallScore - before.overallScore
                     val moistureDiff = after.moistureLevel - before.moistureLevel
                     val oilDiff = after.oilLevel - before.oilLevel
@@ -634,7 +1055,6 @@ fun IngredientMatcherModal(
     currentSkinType: String,
     onDismiss: () -> Unit
 ) {
-    var searchIngredient by remember { mutableStateOf("") }
     var selectedIngredient by remember { mutableStateOf<IngredientInfo?>(null) }
 
     val presetIngredients = listOf(
@@ -672,7 +1092,6 @@ fun IngredientMatcherModal(
                     color = MutedText
                 )
 
-                // Quick Ingredient Chips
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(presetIngredients) { item ->
                         FilterChip(
@@ -774,7 +1193,6 @@ fun SkinTrendLineCanvas(records: List<SkinScanRecord>) {
             Offset(x, y)
         }
 
-        // Draw Score Line (RosePrimary)
         val scorePath = Path().apply {
             moveTo(scorePoints.first().x, scorePoints.first().y)
             for (i in 1 until scorePoints.size) {
@@ -787,7 +1205,6 @@ fun SkinTrendLineCanvas(records: List<SkinScanRecord>) {
             style = Stroke(width = 3.dp.toPx())
         )
 
-        // Draw Moisture Line (Blue)
         val moisturePath = Path().apply {
             moveTo(moisturePoints.first().x, moisturePoints.first().y)
             for (i in 1 until moisturePoints.size) {
@@ -800,7 +1217,6 @@ fun SkinTrendLineCanvas(records: List<SkinScanRecord>) {
             style = Stroke(width = 2.dp.toPx())
         )
 
-        // Draw Circles on Points
         scorePoints.forEach { pt ->
             drawCircle(color = Color.White, radius = 5.dp.toPx(), center = pt)
             drawCircle(color = RosePrimary, radius = 3.5.dp.toPx(), center = pt)
@@ -856,45 +1272,30 @@ fun HistoryRecordCard(record: SkinScanRecord) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Text(
-                        text = "得分：${record.overallScore}分",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = RosePrimary
-                    )
-                    Text(
-                        text = "水分 ${record.moistureLevel}% · 含油 ${record.oilLevel}% · 敏感 ${record.sensitivityScore}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Surface(
-                    shape = CircleShape,
-                    color = ChampagneGold.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(4.dp)
-                ) {
-                    Text(
-                        text = record.barrierHealth,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFE65100),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
+                Text(text = "综合得分：${record.overallScore} 分", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text(text = "水分:${record.moistureLevel}%  油脂:${record.oilLevel}%  敏感:${record.sensitivityScore}%", style = MaterialTheme.typography.labelSmall, color = MutedText)
             }
 
-            if (record.primaryConcerns.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "关注点：${record.primaryConcerns}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MutedText
-                )
+            val concernsList = record.primaryConcerns.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            if (concernsList.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    concernsList.forEach { concern ->
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Text(
+                                text = concern,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }

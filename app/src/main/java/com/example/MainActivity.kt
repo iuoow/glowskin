@@ -65,6 +65,7 @@ fun MainAppContent(viewModel: SkinViewModel) {
 
     val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
     val isAiThinking by viewModel.isAiThinking.collectAsStateWithLifecycle()
+    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
 
     // Core 4 Bottom Navigation Tabs
     val bottomNavScreens = listOf(
@@ -163,9 +164,13 @@ fun MainAppContent(viewModel: SkinViewModel) {
                 )
 
                 Screen.Profile -> HistoryAndProfileScreen(
+                    userProfile = userProfile,
                     records = allScanRecords,
                     favoriteProducts = products.filter { it.isFavorite },
                     onToggleFavorite = { id, isFav -> viewModel.toggleFavorite(id, isFav) },
+                    onLoginUser = { nickname, phone, type -> viewModel.loginUser(nickname, phone, type) },
+                    onLogoutUser = { viewModel.logoutUser() },
+                    onUpdateProfile = { name, goal -> viewModel.updateUserProfile(name, goal) },
                     onNavigateToProducts = { currentScreen = Screen.Products },
                     onNavigateToRoutine = { currentScreen = Screen.Routine },
                     onNavigateToDetect = { currentScreen = Screen.Detect }

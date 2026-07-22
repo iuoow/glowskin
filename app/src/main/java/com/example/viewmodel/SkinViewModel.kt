@@ -16,6 +16,17 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+data class UserProfile(
+    val userId: String = "user_88392",
+    val nickname: String = "Glow美肤达人",
+    val phoneOrEmail: String = "138****9201",
+    val avatarType: Int = 1,
+    val isLoggedIn: Boolean = true,
+    val loginType: String = "微信快捷登录",
+    val vipLevel: String = "SVIP黑金会员",
+    val skinGoal: String = "深层补水 / 强健屏障 / 淡褪痘印"
+)
+
 data class QuizAnswers(
     val shineAndOil: String = "T区轻度出油，两颊偏干",
     val tightnessAfterWash: String = "洗脸后10分钟感到紧绷发干",
@@ -63,6 +74,10 @@ class SkinViewModel(application: Application) : AndroidViewModel(application) {
     val searchQuery = MutableStateFlow("")
 
     val products: StateFlow<List<Product>>
+
+    // User Profile & Authentication State
+    private val _userProfile = MutableStateFlow(UserProfile())
+    val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
 
     // AI Consultant Chat History
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(
@@ -197,6 +212,32 @@ class SkinViewModel(application: Application) : AndroidViewModel(application) {
             _chatMessages.value = _chatMessages.value + aiMsg
             _isAiThinking.value = false
         }
+    }
+
+    fun loginUser(nickname: String, phoneOrEmail: String, loginType: String) {
+        _userProfile.value = UserProfile(
+            userId = "user_" + (10000..99999).random(),
+            nickname = if (nickname.isNotBlank()) nickname else "Glow美肤达人",
+            phoneOrEmail = if (phoneOrEmail.isNotBlank()) phoneOrEmail else "138****" + (1000..9999).random(),
+            isLoggedIn = true,
+            loginType = loginType,
+            vipLevel = "SVIP黑金会员"
+        )
+    }
+
+    fun logoutUser() {
+        _userProfile.value = _userProfile.value.copy(
+            isLoggedIn = false,
+            nickname = "未登录",
+            phoneOrEmail = "点击登录以同步数据"
+        )
+    }
+
+    fun updateUserProfile(nickname: String, skinGoal: String) {
+        _userProfile.value = _userProfile.value.copy(
+            nickname = nickname.ifBlank { _userProfile.value.nickname },
+            skinGoal = skinGoal.ifBlank { _userProfile.value.skinGoal }
+        )
     }
 
     private fun getTodayIso(): String {
