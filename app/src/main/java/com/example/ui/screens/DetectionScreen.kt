@@ -915,133 +915,355 @@ fun QuizDetectionContent(
     onAnswersChanged: (QuizAnswers) -> Unit,
     onSubmitQuiz: () -> Unit
 ) {
-    LazyColumn(
+    var currentQuestionIndex by remember { mutableIntStateOf(0) }
+
+    val questions = listOf(
+        QuizQuestionItem(
+            title = "出油与发亮情况",
+            subtitle = "评估面部T区与两颊皮脂腺的分泌活跃度",
+            icon = Icons.Default.Opacity,
+            options = listOf(
+                "全脸出油严重，油光满面",
+                "T区轻度出油，两颊偏干",
+                "全脸很少出油，经常感觉干燥",
+                "油水分泌平衡，无明显油光"
+            ),
+            getSelected = { answers.shineAndOil },
+            updateAnswer = { onAnswersChanged(answers.copy(shineAndOil = it)) }
+        ),
+        QuizQuestionItem(
+            title = "洁面后不涂护肤品的感受",
+            subtitle = "测量清洁后角质层自然经皮水分流失与紧绷感",
+            icon = Icons.Default.WaterDrop,
+            options = listOf(
+                "10分钟内感到全脸紧绷发干甚至刺痛",
+                "两颊轻微紧绷，T区舒适",
+                "感觉清爽舒适，无紧绷感",
+                "半小时内很快又大量出油"
+            ),
+            getSelected = { answers.tightnessAfterWash },
+            updateAnswer = { onAnswersChanged(answers.copy(tightnessAfterWash = it)) }
+        ),
+        QuizQuestionItem(
+            title = "毛孔与黑头状态",
+            subtitle = "观察毛孔粗大程度与角栓氧化结晶分布",
+            icon = Icons.Default.FilterVintage,
+            options = listOf(
+                "鼻翼与两颊毛孔粗大，有明显黑头",
+                "鼻翼毛孔明显，伴有黑头",
+                "毛孔极其细小，几乎看不到黑头",
+                "偶有闭口粉刺"
+            ),
+            getSelected = { answers.poreCondition },
+            updateAnswer = { onAnswersChanged(answers.copy(poreCondition = it)) }
+        ),
+        QuizQuestionItem(
+            title = "敏感与泛红频繁度",
+            subtitle = "评估外界环境刺激下的皮肤神经敏感与屏障防御",
+            icon = Icons.Default.Shield,
+            options = listOf(
+                "换季或温度变化时面部易泛红刺痛",
+                "使用新护肤品容易痒或起小红粒",
+                "极少泛红发痒，耐受度高",
+                "日晒后很快泛红灼热"
+            ),
+            getSelected = { answers.rednessSensitivity },
+            updateAnswer = { onAnswersChanged(answers.copy(rednessSensitivity = it)) }
+        ),
+        QuizQuestionItem(
+            title = "痘痘与闭口生长频率",
+            subtitle = "诊断毛囊皮脂腺炎症发炎与角化异常频率",
+            icon = Icons.Default.BugReport,
+            options = listOf(
+                "频繁长红肿脓包痘痘",
+                "生理期前偶尔长1-2颗红肿痘痘",
+                "下巴额头多闭口粉刺",
+                "几乎不长痘痘"
+            ),
+            getSelected = { answers.acneFrequency },
+            updateAnswer = { onAnswersChanged(answers.copy(acneFrequency = it)) }
+        ),
+        QuizQuestionItem(
+            title = "色素沉着与痘印斑点",
+            subtitle = "检查黑色素沉淀、炎症后痘印与晒斑分布",
+            icon = Icons.Default.AutoAwesome,
+            options = listOf(
+                "局部有少量红黑痘印或晒斑",
+                "面部暗沉发黄无光泽",
+                "有顽固色斑需要淡化",
+                "肤色均匀无明显瑕疵"
+            ),
+            getSelected = { answers.pigmentationSpots },
+            updateAnswer = { onAnswersChanged(answers.copy(pigmentationSpots = it)) }
+        )
+    )
+
+    val currentQuestion = questions[currentQuestionIndex]
+    val animatedProgress by animateFloatAsState(
+        targetValue = (currentQuestionIndex + 1) / 6f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "quizProgress"
+    )
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        item {
-            Text(
-                text = "请根据近两周的实际肤感回答以下6个问题：",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MutedText
-            )
-        }
-
-        // Question 1
-        item {
-            QuizQuestionCard(
-                stepNumber = "1",
-                questionTitle = "出油与发亮情况",
-                options = listOf(
-                    "全脸出油严重，油光满面",
-                    "T区轻度出油，两颊偏干",
-                    "全脸很少出油，经常感觉干燥",
-                    "油水分泌平衡，无明显油光"
-                ),
-                selectedOption = answers.shineAndOil,
-                onSelect = { onAnswersChanged(answers.copy(shineAndOil = it)) }
-            )
-        }
-
-        // Question 2
-        item {
-            QuizQuestionCard(
-                stepNumber = "2",
-                questionTitle = "洁面后不涂护肤品的感受",
-                options = listOf(
-                    "10分钟内感到全脸紧绷发干甚至刺痛",
-                    "两颊轻微紧绷，T区舒适",
-                    "感觉清爽舒适，无紧绷感",
-                    "半小时内很快又大量出油"
-                ),
-                selectedOption = answers.tightnessAfterWash,
-                onSelect = { onAnswersChanged(answers.copy(tightnessAfterWash = it)) }
-            )
-        }
-
-        // Question 3
-        item {
-            QuizQuestionCard(
-                stepNumber = "3",
-                questionTitle = "毛孔与黑头状态",
-                options = listOf(
-                    "鼻翼与两颊毛孔粗大，有明显黑头",
-                    "鼻翼毛孔明显，伴有黑头",
-                    "毛孔极其细小，几乎看不到黑头",
-                    "偶有闭口粉刺"
-                ),
-                selectedOption = answers.poreCondition,
-                onSelect = { onAnswersChanged(answers.copy(poreCondition = it)) }
-            )
-        }
-
-        // Question 4
-        item {
-            QuizQuestionCard(
-                stepNumber = "4",
-                questionTitle = "敏感与泛红频繁度",
-                options = listOf(
-                    "换季或温度变化时面部易泛红刺痛",
-                    "使用新护肤品容易痒或起小红粒",
-                    "极少泛红发痒，耐受度高",
-                    "日晒后很快泛红灼热"
-                ),
-                selectedOption = answers.rednessSensitivity,
-                onSelect = { onAnswersChanged(answers.copy(rednessSensitivity = it)) }
-            )
-        }
-
-        // Question 5
-        item {
-            QuizQuestionCard(
-                stepNumber = "5",
-                questionTitle = "痘痘与闭口生长频率",
-                options = listOf(
-                    "频繁长红肿脓包痘痘",
-                    "生理期前偶尔长1-2颗红肿痘痘",
-                    "下巴额头多闭口粉刺",
-                    "几乎不长痘痘"
-                ),
-                selectedOption = answers.acneFrequency,
-                onSelect = { onAnswersChanged(answers.copy(acneFrequency = it)) }
-            )
-        }
-
-        // Question 6
-        item {
-            QuizQuestionCard(
-                stepNumber = "6",
-                questionTitle = "色素沉着与痘印斑点",
-                options = listOf(
-                    "局部有少量红黑痘印或晒斑",
-                    "面部暗沉发黄无光泽",
-                    "有顽固色斑需要淡化",
-                    "肤色均匀无明显瑕疵"
-                ),
-                selectedOption = answers.pigmentationSpots,
-                onSelect = { onAnswersChanged(answers.copy(pigmentationSpots = it)) }
-            )
-        }
-
-        item {
-            Button(
-                onClick = onSubmitQuiz,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .testTag("submit_quiz_button"),
+        Column {
+            // Header Progress Bar Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = RosePrimary)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, RoseBorder)
             ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("提交问卷生成 AI 美肤诊断", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Surface(
+                                shape = CircleShape,
+                                color = RosePrimary,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "${currentQuestionIndex + 1}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "深度问卷诊断",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Text(
+                            text = "进度 ${currentQuestionIndex + 1} / 6 (${(animatedProgress * 100).toInt()}%)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = RosePrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Linear Progress Bar
+                    LinearProgressIndicator(
+                        progress = { animatedProgress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(CircleShape),
+                        color = RosePrimary,
+                        trackColor = RosePrimary.copy(alpha = 0.15f)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Step Dots Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        repeat(6) { idx ->
+                            val isCompleted = questions[idx].getSelected().isNotEmpty()
+                            val isCurrent = idx == currentQuestionIndex
+
+                            Box(
+                                modifier = Modifier
+                                    .size(if (isCurrent) 12.dp else 8.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isCurrent) RosePrimary
+                                        else if (isCompleted) SageGreen
+                                        else Color.LightGray.copy(alpha = 0.5f)
+                                    )
+                                    .clickable { currentQuestionIndex = idx }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Animated Single-Question Card View
+            AnimatedContent(
+                targetState = currentQuestionIndex,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                            slideOutHorizontally { width -> -width } + fadeOut())
+                    } else {
+                        (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                            slideOutHorizontally { width -> width } + fadeOut())
+                    }
+                },
+                label = "questionTransition"
+            ) { targetIndex ->
+                val q = questions[targetIndex]
+                val selectedOpt = q.getSelected()
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.5.dp, RoseBorder)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = RosePrimary.copy(alpha = 0.12f),
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = q.icon,
+                                        contentDescription = null,
+                                        tint = RosePrimary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = q.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = q.subtitle,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MutedText
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // Option Items
+                        q.options.forEach { option ->
+                            val isSelected = selectedOpt == option
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 5.dp)
+                                    .clickable { q.updateAnswer(option) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) RosePrimary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                ),
+                                border = BorderStroke(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) RosePrimary else Color.Transparent
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = option,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) RosePrimary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = { q.updateAnswer(option) },
+                                        colors = RadioButtonDefaults.colors(selectedColor = RosePrimary)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom Wizard Navigation Controls
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (currentQuestionIndex > 0) {
+                OutlinedButton(
+                    onClick = { currentQuestionIndex-- },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, RosePrimary)
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("上一题", fontWeight = FontWeight.Bold)
+                }
+            }
+
+            if (currentQuestionIndex < 5) {
+                Button(
+                    onClick = { currentQuestionIndex++ },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .testTag("quiz_next_button"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = RosePrimary)
+                ) {
+                    Text("下一题", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+            } else {
+                Button(
+                    onClick = onSubmitQuiz,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .testTag("submit_quiz_button"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = RosePrimary)
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("提交诊断", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 }
+
+private data class QuizQuestionItem(
+    val title: String,
+    val subtitle: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val options: List<String>,
+    val getSelected: () -> String,
+    val updateAnswer: (String) -> Unit
+)
 
 @Composable
 fun QuizQuestionCard(

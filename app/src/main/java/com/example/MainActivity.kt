@@ -66,11 +66,10 @@ fun MainAppContent(viewModel: SkinViewModel) {
     val chatMessages by viewModel.chatMessages.collectAsStateWithLifecycle()
     val isAiThinking by viewModel.isAiThinking.collectAsStateWithLifecycle()
 
-    val screens = listOf(
+    // Core 4 Bottom Navigation Tabs
+    val bottomNavScreens = listOf(
         Screen.Home,
         Screen.Detect,
-        Screen.Routine,
-        Screen.Products,
         Screen.Consult,
         Screen.Profile
     )
@@ -81,7 +80,7 @@ fun MainAppContent(viewModel: SkinViewModel) {
                 containerColor = MaterialTheme.colorScheme.surface,
                 windowInsets = WindowInsets.navigationBars
             ) {
-                screens.forEach { screen ->
+                bottomNavScreens.forEach { screen ->
                     val selected = currentScreen.route == screen.route
                     NavigationBarItem(
                         selected = selected,
@@ -166,7 +165,10 @@ fun MainAppContent(viewModel: SkinViewModel) {
                 Screen.Profile -> HistoryAndProfileScreen(
                     records = allScanRecords,
                     favoriteProducts = products.filter { it.isFavorite },
-                    onToggleFavorite = { id, isFav -> viewModel.toggleFavorite(id, isFav) }
+                    onToggleFavorite = { id, isFav -> viewModel.toggleFavorite(id, isFav) },
+                    onNavigateToProducts = { currentScreen = Screen.Products },
+                    onNavigateToRoutine = { currentScreen = Screen.Routine },
+                    onNavigateToDetect = { currentScreen = Screen.Detect }
                 )
             }
         }

@@ -1,10 +1,7 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -127,10 +124,15 @@ fun SkinAnalysisDataVisualizationCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Animated Chart View Switching
+            // Animated Chart View Switching with spring physics and scale/slide transitions
             AnimatedContent(
                 targetState = selectedChartIndex,
-                transitionSpec = { fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(200)) },
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(350)) +
+                            slideInVertically(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), initialOffsetY = { 30 }) +
+                            scaleIn(initialScale = 0.95f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy))) togetherWith
+                            (fadeOut(animationSpec = tween(200)) + scaleOut(targetScale = 0.95f))
+                },
                 label = "chartViewTransition"
             ) { targetIndex ->
                 when (targetIndex) {
@@ -341,9 +343,9 @@ fun SkinMetricsRadarChart(
 fun MoistureOilTextureBarChart(
     result: AiSkinAnalysisResult
 ) {
-    val animatedMoisture by animateFloatAsState(targetValue = result.moistureLevel / 100f, animationSpec = tween(900), label = "mAnim")
-    val animatedOil by animateFloatAsState(targetValue = result.oilLevel / 100f, animationSpec = tween(900), label = "oAnim")
-    val animatedTexture by animateFloatAsState(targetValue = result.textureLevel / 100f, animationSpec = tween(900), label = "tAnim")
+    val animatedMoisture by animateFloatAsState(targetValue = result.moistureLevel / 100f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "mAnim")
+    val animatedOil by animateFloatAsState(targetValue = result.oilLevel / 100f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "oAnim")
+    val animatedTexture by animateFloatAsState(targetValue = result.textureLevel / 100f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "tAnim")
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -509,7 +511,7 @@ fun FacialZoneTextureWaveChart(
 
     val animatedChartProgress by animateFloatAsState(
         targetValue = 1f,
-        animationSpec = tween(1200, easing = LinearOutSlowInEasing),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
         label = "waveChartProgress"
     )
 
