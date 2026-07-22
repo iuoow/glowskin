@@ -1,0 +1,6 @@
+{
+  "name": "GlowSkin 肤质检测与美肤顾问",
+  "description": "专为女性打造的智能肤质检测、皮肤问题分析、个性化改善建议与护肤品推荐应用",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
