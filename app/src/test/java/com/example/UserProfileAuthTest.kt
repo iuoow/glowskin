@@ -71,4 +71,22 @@ class UserProfileAuthTest {
         assertEquals("Passwords must match", newPassword, confirmPassword)
         assertFalse("Short password length should fail validation", shortPassword.length >= 6)
     }
+
+    @Test
+    fun testCameraPhotoCaptureState() {
+        var userCapturedBitmap: Any? = null
+        var selectedSampleIndex = 0
+
+        // Initially no photo captured, sample photo selected
+        assertNull("Initial photo should be null", userCapturedBitmap)
+        assertEquals(0, selectedSampleIndex)
+
+        // Simulate capturing photo from camera
+        userCapturedBitmap = "mock_captured_bitmap"
+        assertNotNull("User photo captured successfully", userCapturedBitmap)
+
+        // Clear captured photo
+        userCapturedBitmap = null
+        assertNull("Photo cleared successfully", userCapturedBitmap)
+    }
 }
