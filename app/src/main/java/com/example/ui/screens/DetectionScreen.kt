@@ -630,6 +630,26 @@ fun PhotoDetectionContent(
     // Camera Flash Animation State
     var showShutterFlash by remember { mutableStateOf(false) }
 
+    // Real-time CameraX Mode State
+    var showRealtimeCamera by remember { mutableStateOf(false) }
+
+    if (showRealtimeCamera) {
+        CameraScreen(
+            onPhotoCaptured = { bitmap ->
+                showRealtimeCamera = false
+                try {
+                    soundPlayer.play(MediaActionSound.SHUTTER_CLICK)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                showShutterFlash = true
+                onPhotoCaptured(bitmap)
+            },
+            onClose = { showRealtimeCamera = false }
+        )
+        return
+    }
+
     LaunchedEffect(showShutterFlash) {
         if (showShutterFlash) {
             kotlinx.coroutines.delay(220)
@@ -728,7 +748,7 @@ fun PhotoDetectionContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { launchCameraWithPermission() },
+                    onClick = { showRealtimeCamera = true },
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp)
